@@ -10,3 +10,5 @@ crossterm = "0.25.0"
 efivar = "0.2.1"
 uefi = { version = "0.16.0", features = [ "exts" ] }
 regex = "1.6.0"
+uuid = "1.1.2"
+nix = { version = "0.25.0", features = [ "reboot", "fs" ] }
