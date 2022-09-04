@@ -28,11 +28,15 @@ pub fn kexec(ctx: KexecData) {
         return;
     }
 
+    // TODO: non-systemd distros
     if PathBuf::from("/usr/bin/systemctl").exists() {
         Command::new("systemctl").arg("kexec").status().unwrap();
     }
 }
 
 pub fn reboot() {
-    todo!("reboot");
+    // TODO: non-systemd distros
+    if PathBuf::from("/usr/bin/systemctl").exists() {
+        Command::new("systemctl").arg("reboot").status().unwrap();
+    }
 }

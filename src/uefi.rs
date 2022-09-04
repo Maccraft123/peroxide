@@ -1,4 +1,7 @@
+use crate::boot::reboot;
 use crate::entry::BootEntry;
+use efivar::efi::VariableFlags;
+use efivar::efi::VariableName;
 use regex::Regex;
 use uefi::proto::device_path::DevicePath;
 use uefi::proto::device_path::DeviceType;
@@ -62,7 +65,7 @@ fn sys_block_data(device: &str, data: &str) -> String {
 
 #[derive(Debug)]
 pub struct EfiEntry {
-    id_str: String,
+    id: u16,
     description: String,
     partuuid: Option<Uuid>,
     is_default: bool,
@@ -92,6 +95,12 @@ impl BootEntry for EfiEntry {
                         if boot_id.len() > 8 {
                             continue;
                         }
+
+                        let id = if let Ok(tmp) = u16::from_str_radix(&boot_id, 16) {
+                            tmp
+                        } else {
+                            0
+                        };
                         
                         let device_path: &DevicePath = unsafe {
                             std::mem::transmute(&buf[desc_end_offset..])
@@ -128,7 +137,7 @@ impl BootEntry for EfiEntry {
                         }
 
                         ret.push(EfiEntry {
-                            id_str: boot_id,
+                            id,
                             description,
                             partuuid,
                             is_default: default_entry,
@@ -201,7 +210,13 @@ impl BootEntry for EfiEntry {
         ret.into_iter().filter(|e| !(e.is_default && seen_parts.contains(&e.partuuid.unwrap_or_default())) || e.partuuid.is_none()).collect()
     }
     fn boot(&self) {
-        println!("Rebooting into Boot{}", &self.id_str);
+        let mut manager = efivar::system();
+        let next = VariableName::new("BootNext");
+        let attr = VariableFlags::NON_VOLATILE | VariableFlags::BOOTSERVICE_ACCESS | VariableFlags::RUNTIME_ACCESS;
+        let val: [u8; 2] = self.id.to_le_bytes();
+        manager.write(&next, attr, &val).expect("Failed to write BootNext");
+
+        reboot();
     }
     fn hide(&self) -> bool {
         !self.description.starts_with("Windows Boot Manager")
