@@ -1,6 +1,7 @@
 mod entry;
 mod acetone;
 mod bootloaderspec;
+mod uefi;
 
 use crate::entry::BootEntry;
 
@@ -203,4 +204,5 @@ fn main() {
     entries.push(bootentry_pwroff());
     let choice = menu(&entries).unwrap();
     println!("Chosen boot option: {}", choice.user_readable_name());
+    choice.boot();
 }

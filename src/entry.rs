@@ -1,5 +1,6 @@
 use crate::bootloaderspec::FreedesktopBootEntry;
 use crate::acetone::AcetoneEntry;
+use crate::uefi::EfiEntry;
 
 pub fn enumerate_all() -> Vec<Box<dyn BootEntry>> {
     let mut ret: Vec<Box<dyn BootEntry>> = Vec::new();
@@ -11,6 +12,11 @@ pub fn enumerate_all() -> Vec<Box<dyn BootEntry>> {
 
     let acetone_entries: Vec<AcetoneEntry> = AcetoneEntry::enumerate();
     for entry in acetone_entries {
+        ret.push(Box::new(entry));
+    };
+
+    let uefi_entries: Vec<EfiEntry> = EfiEntry::enumerate();
+    for entry in uefi_entries {
         ret.push(Box::new(entry));
     };
 
