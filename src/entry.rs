@@ -23,3 +23,12 @@ pub trait BootEntry {
     fn boot(&self);
     fn hide(&self) -> bool;
 }
+
+impl PartialEq for dyn BootEntry {
+    fn eq(&self, other: &Self) -> bool {
+        self.user_readable_name() == other.user_readable_name()
+    }
+    fn ne(&self, other: &Self) -> bool {
+        self.user_readable_name() != other.user_readable_name()
+    }
+}
