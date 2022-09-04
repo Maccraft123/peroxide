@@ -1,4 +1,7 @@
 use crate::entry::BootEntry;
+use crate::boot::kexec;
+use crate::boot::KexecData;
+
 use std::fs::{
     self,
     File,
@@ -97,6 +100,18 @@ impl BootEntry for FreedesktopBootEntry {
     }
     fn boot(&self) {
         println!("Booting {:?}({})", self.title, self.linux);
+        let abs_initrd_path = if let Some(rel_initrd_path) = self.initrd.as_ref() {
+            Some(format!("/boot/{}", rel_initrd_path))
+        } else {
+            None
+        };
+        let data = KexecData {
+            kernel: format!("/boot/{}", self.linux.clone()),
+            cmdline: self.options.clone(),
+            initrd: abs_initrd_path,
+            dt: self.devicetree.clone(),
+        };
+        kexec(data);
     }
     fn hide(&self) -> bool {
         false

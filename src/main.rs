@@ -2,6 +2,7 @@ mod entry;
 mod acetone;
 mod bootloaderspec;
 mod uefi;
+mod boot;
 
 use crate::entry::BootEntry;
 
