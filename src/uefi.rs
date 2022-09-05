@@ -78,6 +78,11 @@ impl BootEntry for EfiEntry {
     fn enumerate() -> Vec<EfiEntry> {
         let mut ret = Vec::new();
 
+        // avoid panicking on efi-less systems
+        if !PathBuf::from("/sys/firmware/efi").exists() {
+            return ret;
+        }
+
         let mut buf: [u8; 4096] = [0u8; 4096];
         let boot_xxxx = Regex::new(r"^Boot\d\d\d\d$").unwrap();
         let manager = efivar::system();
@@ -89,7 +94,7 @@ impl BootEntry for EfiEntry {
                     if res.is_ok() {
                         let (description, end) = char16_to_string(&buf[(32+16)/8..]);
                         let desc_end_offset = (32+16)/8 + end; // defined somewhere in efi spec,
-                                                               // forgot where
+                                                                // forgot where
 
                         let boot_id = var.short_name().split_off(4);
                         if boot_id.len() > 8 {
