@@ -17,6 +17,7 @@ use nix::fcntl::OFlag;
 use nix::dir::Type;
 use nix::fcntl::readlink;
 use anyhow::Context;
+use gpt::GptConfig;
 
 fn char16_to_string(buf: &[u8]) -> (String, usize) {
     let mut iter = buf.iter();
@@ -152,7 +153,7 @@ impl BootEntry for EfiEntry {
             }
         }
 
-        let mut device_name_map = HashMap::new();
+        let mut guid_name_map = HashMap::new();
         if let Ok(mut dev) = Dir::open("/dev/", OFlag::O_DIRECTORY | OFlag::O_RDONLY, Mode::empty()) {
             let iter = dev.iter();
             let xda_regex = Regex::new(r"^(v|h|s)da$").unwrap();
@@ -174,6 +175,7 @@ impl BootEntry for EfiEntry {
                     }
 
                     let disk: PathBuf = file.file_name().to_str().unwrap().into();
+                    let dev_disk = PathBuf::from("/dev/").join(&disk);
                     let disk_string = disk.to_str().unwrap().to_string();
 
                     let mut name = sys_block_data(&disk_string, "vendor") + &sys_block_data(&disk_string, "model");
@@ -183,28 +185,22 @@ impl BootEntry for EfiEntry {
                             name.pop();
                         }
                     }
-                    device_name_map.insert(disk_string, name);
+
+                    let gpt_cfg = GptConfig::new().writable(false);
+                    if let Ok(gpt_disk) = gpt_cfg.open(dev_disk) {
+                        for (_, part) in gpt_disk.partitions() {
+                            guid_name_map.insert(part.part_guid.as_u128(), name.clone());
+                        }
+                    }
                 }
             }
         }
 
         let mut seen_parts = HashSet::new();
-        let strip_part_rgx = Regex::new(r"p?\d$").unwrap();
-
         for entry in &mut ret {
             if let Some(uuid) = entry.partuuid.clone() {
-                // get /dev/{} path of partition
-                let path = PathBuf::from(format!("/dev/disk/by-partuuid/{}", uuid));
-                if let Ok(dev_part_os) = readlink(&path) {
-                    if let Ok(dev_part) = dev_part_os.into_string() {
-                        let dev_dev = PathBuf::from(strip_part_rgx.replace(&dev_part, "").to_string());
-                        if let Some(just_dev_os) = dev_dev.file_name() {
-                            let just_dev = just_dev_os.to_string_lossy();
-                            if let Some(name) = device_name_map.get(just_dev.as_ref()) {
-                                entry.description += &format!(" on {}", name);
-                            }
-                        }
-                    }
+                if let Some(name) = guid_name_map.get(&uuid.as_u128()) {
+                    entry.description += &format!(" on {}", name);
                 }
                 if !entry.is_default {
                     seen_parts.insert(uuid);
