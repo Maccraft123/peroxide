@@ -22,13 +22,15 @@ use crossterm::{
     }
 };
 
-use ez_input::RinputerHandle;
+use ez_input::AnyHandle;
 use ez_input::EzEvent;
 use std::sync::mpsc::Sender;
 use std::sync::mpsc::channel;
 use std::io::stdout;
 use std::io::Stdout;
 use std::io::Write;
+use std::time::Duration;
+use std::thread;
 use std::rc::Rc;
 
 use ozone::{
@@ -37,24 +39,29 @@ use ozone::{
 
 fn kbd_input(tx: Sender<EzEvent>) {
     loop {
-        match event::read().unwrap() {
-            Event::Key(key) => {
-                match key.code {
-                    KeyCode::Enter  => tx.send(EzEvent::South(true)).unwrap(),
-                    KeyCode::Down   => tx.send(EzEvent::DirectionDown).unwrap(),
-                    KeyCode::Up     => tx.send(EzEvent::DirectionUp).unwrap(),
-                    _ => (),
-                }
-            },
-            _ => (),
+        let ev = event::read();
+        if let Ok(event) = ev {
+            match event {
+                Event::Key(key) => {
+                    match key.code {
+                        KeyCode::Enter  => tx.send(EzEvent::South(true)).unwrap(),
+                        KeyCode::Down   => tx.send(EzEvent::DirectionDown).unwrap(),
+                        KeyCode::Up     => tx.send(EzEvent::DirectionUp).unwrap(),
+                        _ => (),
+                    }
+                },
+                _ => (),
+            }
+        } else {
+            break;
         }
     }
 }
 
 fn pad_input(tx: Sender<EzEvent>) {
-    if let Some(mut handle) = RinputerHandle::open() {
-        loop {
-            let ev = handle.get_event_blocking().unwrap();
+    let mut handle = AnyHandle::open();
+    loop {
+        if let Some(ev) = handle.get_event_blocking() {
             tx.send(ev).unwrap();
         }
     }

@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.61"
+anyhow = "1.0.64"
 ez_input = { git = "https://github.com/R-ARM/ez_input.git", branch = "main" }
 crossterm = "0.25.0"
 efivar = "0.2.1"
