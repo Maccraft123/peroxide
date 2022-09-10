@@ -293,6 +293,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ozone"
+version = "0.1.0"
+source = "git+https://github.com/Maccraft123/ozone.git?branch=main#38e4f838cddc549d755e2bc14a72c0fcfd7ac8c0"
+dependencies = [
+ "anyhow",
+ "nix 0.25.0",
+]
+
+[[package]]
 name = "parking_lot"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -324,6 +333,7 @@ dependencies = [
  "efivar",
  "ez_input",
  "nix 0.25.0",
+ "ozone",
  "regex",
  "uefi",
  "uuid 1.1.2",

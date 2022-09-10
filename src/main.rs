@@ -31,6 +31,10 @@ use std::io::Stdout;
 use std::io::Write;
 use std::rc::Rc;
 
+use ozone::{
+    init, Config,
+};
+
 fn kbd_input(tx: Sender<EzEvent>) {
     loop {
         match event::read().unwrap() {
@@ -201,6 +205,12 @@ fn menu(choices: &Vec<Box<dyn BootEntry>>) -> Result<&Box<dyn BootEntry>> {
 }
 
 fn main() {
+    let conf = Config::new()
+        .mount_boot(true)
+        .mount_sys(true);
+    init(&conf).unwrap();
+
+
     let mut entries = entry::enumerate_all();
     entries.push(bootentry_pwroff());
     let choice = menu(&entries).unwrap();
