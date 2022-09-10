@@ -39,26 +39,26 @@ impl FreedesktopBootEntry {
                     continue;
                 }
 
-                if let Some(new_title) = line.strip_prefix("title ") {
-                    title = Some(new_title.to_string());
+                if let Some(new_title) = line.strip_prefix("title") {
+                    title = Some(new_title.trim().to_string());
                 }
-                if let Some(new_version) = line.strip_prefix("version ") {
-                    version = Some(new_version.to_string());
+                if let Some(new_version) = line.strip_prefix("version") {
+                    version = Some(new_version.trim().to_string());
                 }
-                if let Some(new_machine_id) = line.strip_prefix("machine-id ") {
-                    machine_id = Some(new_machine_id.to_string());
+                if let Some(new_machine_id) = line.strip_prefix("machine-id") {
+                    machine_id = Some(new_machine_id.trim().to_string());
                 }
-                if let Some(new_linux) = line.strip_prefix("linux ") {
-                    linux = Some(new_linux.to_string());
+                if let Some(new_linux) = line.strip_prefix("linux") {
+                    linux = Some(new_linux.trim().to_string());
                 }
-                if let Some(new_initrd) = line.strip_prefix("initrd ") {
-                    initrd = Some(new_initrd.to_string());
+                if let Some(new_initrd) = line.strip_prefix("initrd") {
+                    initrd = Some(new_initrd.trim().to_string());
                 }
-                if let Some(new_options) = line.strip_prefix("options ") {
-                    options = Some(new_options.to_string());
+                if let Some(new_options) = line.strip_prefix("options") {
+                    options = Some(new_options.trim().to_string());
                 }
-                if let Some(new_devicetree) = line.strip_prefix("devicetree ") {
-                    devicetree  = Some(new_devicetree.to_string());
+                if let Some(new_devicetree) = line.strip_prefix("devicetree") {
+                    devicetree  = Some(new_devicetree.trim().to_string());
                 }
             }
         }
