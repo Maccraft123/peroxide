@@ -14,6 +14,33 @@ use nix::{
     },
 };
 
+use std::ffi::CString;
+use std::os::raw::c_int;
+use std::os::unix::io::{AsRawFd, RawFd};
+use std::fs::File;
+use syscalls::{
+    Sysno,
+    syscall,
+};
+
+static KEXEC_FILE_NO_INITRAMFS: c_int = 0x4;
+
+fn kexec_file_load(kernel: File, initrd: Option<File>, cmdline: String) {
+    let sys_kernel_fd: c_int = kernel.as_raw_fd();
+
+    let sys_initrd_fd: c_int = if let Some(i) = &initrd {
+        i.as_raw_fd()
+    } else {
+        -1
+    };
+    
+    let cmdline = unsafe { CString::from_vec_unchecked(cmdline.as_bytes().to_vec()) };
+    let cmdline_len = cmdline.as_bytes_with_nul().len();
+    let flags = if initrd.is_none() { KEXEC_FILE_NO_INITRAMFS } else { 0 };
+
+    unsafe { syscall!(Sysno::kexec_file_load, sys_kernel_fd, sys_initrd_fd, cmdline_len, cmdline.as_ptr(), flags) }.unwrap();
+}
+
 pub struct KexecData {
     pub kernel: String,
     pub cmdline: Option<String>,
@@ -22,27 +49,16 @@ pub struct KexecData {
 }
 
 pub fn kexec(ctx: KexecData) {
-    let mut cmd = Command::new("kexec");
-    if let Some(cmdline) = ctx.cmdline {
-        cmd.arg(format!("--command-line={}", cmdline));
-    }
-    if let Some(initrd) = ctx.initrd {
-        cmd.arg(format!("--initrd={}", initrd));
-    }
-    if let Some(dt) = ctx.dt {
-        todo!("kexec with devicetree");
-    }
-    cmd.arg("--kexec-syscall-auto");
-    cmd.arg("--load");
-    cmd.arg(ctx.kernel);
+    let kernel_file = File::open(ctx.kernel).unwrap();
+    let initrd_file = if let Some(initrd) = &ctx.initrd {
+        Some(File::open(initrd).unwrap())
+    } else {
+        None
+    };
 
-    let status = cmd.status().unwrap();
-    if !status.success() {
-        return;
-    }
+    kexec_file_load(kernel_file, initrd_file, ctx.cmdline.unwrap_or("".to_string()));
 
     // if we are the init it means we can just reboot() safely
-
     if getpid() == Pid::from_raw(1) {
         sys_reboot(RebootMode::RB_KEXEC).unwrap(); // infallible
         unreachable!("We should already have kexeced into new kernel");
@@ -52,6 +68,8 @@ pub fn kexec(ctx: KexecData) {
         Command::new("systemctl").arg("kexec").status().unwrap(); // if fails we have to panic
         unreachable!("We should have already systemctl kexeced into new kernel");
     }
+
+    unreachable!("Couldn't find a method to reboot() into a kexec image");
 }
 
 pub fn reboot() {
