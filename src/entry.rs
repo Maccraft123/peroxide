@@ -1,9 +1,10 @@
 use crate::bootloaderspec::FreedesktopBootEntry;
 use crate::acetone::AcetoneEntry;
 use crate::uefi::EfiEntry;
+use std::fmt;
 
-pub fn enumerate_all() -> Vec<Box<dyn BootEntry>> {
-    let mut ret: Vec<Box<dyn BootEntry>> = Vec::new();
+pub fn enumerate_all() -> Vec<Box<dyn BootEntry + Sync + Send>> {
+    let mut ret: Vec<Box<dyn BootEntry + Sync + Send>> = Vec::new();
 
     let fd_entries: Vec<FreedesktopBootEntry> = FreedesktopBootEntry::enumerate();
     for entry in fd_entries {
@@ -28,6 +29,12 @@ pub trait BootEntry {
     fn enumerate() -> Vec<Self> where Self: Sized;
     fn boot(&self);
     fn hide(&self) -> bool;
+}
+
+impl fmt::Display for dyn BootEntry + Send + Sync {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.user_readable_name())
+    }
 }
 
 impl PartialEq for dyn BootEntry {

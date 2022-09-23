@@ -5,13 +5,12 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.64"
-ez_input = { git = "https://github.com/R-ARM/ez_input.git", branch = "main" }
-crossterm = "0.25.0"
 efivar = "0.2.1"
-uefi = { version = "0.16.0", features = [ "exts" ] }
+uefi = { version = "0.17.0", features = [ "exts" ] }
 regex = "1.6.0"
 uuid = "1.1.2"
 nix = { version = "0.25.0", features = [ "reboot", "fs" ] }
+aski = { git = "https://github.com/Maccraft123/aski.git", branch = "main" }
 ozone = { git = "https://github.com/Maccraft123/ozone.git", branch = "main" }
 gpt = "3.0"
 syscalls = "0.6.6"
