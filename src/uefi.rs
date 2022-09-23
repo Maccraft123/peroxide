@@ -3,8 +3,7 @@ use crate::entry::BootEntry;
 use efivar::efi::VariableFlags;
 use efivar::efi::VariableName;
 use regex::Regex;
-use uefi::proto::device_path::DevicePath;
-use uefi::proto::device_path::DeviceType;
+use uefi::proto::device_path::{PartitionFormat, PartitionSignature, DevicePath};
 use uuid::Uuid;
 use std::collections::HashSet;
 use std::collections::HashMap;
@@ -52,7 +51,6 @@ fn sys_block_data(device: &str, data: &str) -> String {
             eprintln!("{}", e);
         }
     }
-    buf.dedup(); // remove excess
 
     let mut out_string = "".to_string();
     for byte in buf.iter() {
@@ -61,7 +59,7 @@ fn sys_block_data(device: &str, data: &str) -> String {
             out_string.push(c);
         }
     }
-    out_string
+    out_string.trim().to_string()
 }
 
 #[derive(Debug)]
@@ -126,17 +124,13 @@ impl BootEntry for EfiEntry {
                                     default_entry = true;
                                 }
                             } else {
-                                if node.device_type() == DeviceType::MEDIA {
-                                    let media = &buf[desc_end_offset..];
-                                    let signature = &media[24..][..16];
-                                    let signature_type = &media[41];
-                                    
-                                    if signature_type != &0x02 {
-                                        continue; // not a gpt partition
-                                    }
-
-                                    if let Ok(uuid) = Uuid::from_slice_le(signature) {
-                                        partuuid = Some(uuid);
+                                for node in device_path.node_iter() {
+                                    if let Some(hdd) = node.as_hard_drive_media_device_path() {
+                                        if hdd.partition_format() == PartitionFormat::GPT {
+                                            if let Some(PartitionSignature::GUID(uuid)) = hdd.partition_signature() {
+                                                partuuid = Uuid::parse_str(&uuid.to_string()).ok();
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -178,7 +172,7 @@ impl BootEntry for EfiEntry {
                     let dev_disk = PathBuf::from("/dev/").join(&disk);
                     let disk_string = disk.to_str().unwrap().to_string();
 
-                    let mut name = sys_block_data(&disk_string, "vendor") + &sys_block_data(&disk_string, "model");
+                    let mut name = format!("{} {}", sys_block_data(&disk_string, "vendor"), sys_block_data(&disk_string, "model"));
                     // if last character is a space, remove it
                     if let Some(last) = name.chars().last() {
                         if last == ' ' {
