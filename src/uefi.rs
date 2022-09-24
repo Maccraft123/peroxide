@@ -204,7 +204,8 @@ impl BootEntry for EfiEntry {
 
         ret.into_iter().filter(|e| !(e.is_default && seen_parts.contains(&e.partuuid.unwrap_or_default())) || e.partuuid.is_none()).collect()
     }
-    fn boot(&self) {
+
+    fn boot(&self) -> !{
         let mut manager = efivar::system();
         let next = VariableName::new("BootNext");
         let attr = VariableFlags::NON_VOLATILE | VariableFlags::BOOTSERVICE_ACCESS | VariableFlags::RUNTIME_ACCESS;
@@ -212,6 +213,8 @@ impl BootEntry for EfiEntry {
         manager.write(&next, attr, &val).expect("Failed to write BootNext");
 
         reboot();
+
+        panic!("Failed to reboot to boot a uefi entry");
     }
     fn hide(&self) -> bool {
         !self.description.starts_with("Windows Boot Manager")

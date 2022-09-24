@@ -21,7 +21,7 @@ pub fn enumerate_all() -> Vec<Box<dyn BootEntry + Sync + Send>> {
 pub trait BootEntry {
     fn user_readable_name(&self) -> &str;
     fn enumerate() -> Vec<Self> where Self: Sized;
-    fn boot(&self);
+    fn boot(&self) -> !;
     fn hide(&self) -> bool;
 }
 

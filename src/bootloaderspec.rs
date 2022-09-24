@@ -98,8 +98,7 @@ impl BootEntry for FreedesktopBootEntry {
         }
         ret
     }
-    fn boot(&self) {
-        println!("Booting {:?}({})", self.title, self.linux);
+    fn boot(&self) -> !{
         let abs_initrd_path = if let Some(rel_initrd_path) = self.initrd.as_ref() {
             Some(format!("/boot/{}", rel_initrd_path))
         } else {
@@ -112,6 +111,8 @@ impl BootEntry for FreedesktopBootEntry {
             dt: self.devicetree.clone(),
         };
         kexec(data);
+
+        panic!("Failed to kexec into a new kernel!");
     }
     fn hide(&self) -> bool {
         false
