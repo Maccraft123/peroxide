@@ -1,5 +1,4 @@
 use crate::bootloaderspec::FreedesktopBootEntry;
-use crate::acetone::AcetoneEntry;
 use crate::uefi::EfiEntry;
 use std::fmt;
 
@@ -8,11 +7,6 @@ pub fn enumerate_all() -> Vec<Box<dyn BootEntry + Sync + Send>> {
 
     let fd_entries: Vec<FreedesktopBootEntry> = FreedesktopBootEntry::enumerate();
     for entry in fd_entries {
-        ret.push(Box::new(entry));
-    };
-
-    let acetone_entries: Vec<AcetoneEntry> = AcetoneEntry::enumerate();
-    for entry in acetone_entries {
         ret.push(Box::new(entry));
     };
 
