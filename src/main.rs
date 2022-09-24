@@ -13,7 +13,6 @@ fn main() {
     let conf = Config::new()
         .mount_boot(true)
         .mount_sys(true);
-    std::thread::sleep(std::time::Duration::from_secs(5));
     init(&conf).unwrap();
 
     let mut entries = entry::enumerate_all();
