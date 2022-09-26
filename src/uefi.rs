@@ -2,7 +2,6 @@ use crate::boot::reboot;
 use crate::entry::BootEntry;
 use efivar::efi::VariableFlags;
 use efivar::efi::VariableName;
-use regex::Regex;
 use uefi::proto::device_path::{PartitionFormat, PartitionSignature, DevicePath};
 use uuid::Uuid;
 use std::collections::HashSet;
@@ -17,6 +16,9 @@ use nix::dir::Type;
 use nix::fcntl::readlink;
 use anyhow::Context;
 use gpt::GptConfig;
+use hwctl::{
+    SysfsClass, SysfsInnerDevice,
+};
 
 fn char16_to_string(buf: &[u8]) -> (String, usize) {
     let mut iter = buf.iter();
@@ -43,25 +45,6 @@ fn char16_to_string(buf: &[u8]) -> (String, usize) {
         .collect::<String>(), i)
 }
 
-fn sys_block_data(device: &str, data: &str) -> String {
-    let mut buf = Vec::new();
-    let path = format!("/sys/class/block/{}/device/{}", device, data);
-    if let Ok(mut f) = File::open(&path) {
-        if let Err(e) = f.read_to_end(&mut buf).with_context(|| format!("Failed to read data from {}", path)) {
-            eprintln!("{}", e);
-        }
-    }
-
-    let mut out_string = "".to_string();
-    for byte in buf.iter() {
-        let c = char::from(*byte);
-        if c.is_ascii() && c != '\n' {
-            out_string.push(c);
-        }
-    }
-    out_string.trim().to_string()
-}
-
 #[derive(Debug)]
 pub struct EfiEntry {
     id: u16,
@@ -83,12 +66,12 @@ impl BootEntry for EfiEntry {
         }
 
         let mut buf: [u8; 4096] = [0u8; 4096];
-        let boot_xxxx = Regex::new(r"^Boot\d\d\d\d$").unwrap();
         let manager = efivar::system();
         
         if let Ok(var_iter) = manager.get_var_names() {
             for var in var_iter {
-                if boot_xxxx.is_match(var.variable()) {
+                let varname_str = var.variable();
+                if varname_str.starts_with("Boot") && u32::from_str_radix(&varname_str[5..], 16).is_ok() {
                     let res = manager.read(&var, &mut buf);
                     if res.is_ok() {
                         let (description, end) = char16_to_string(&buf[(32+16)/8..]);
@@ -148,42 +131,18 @@ impl BootEntry for EfiEntry {
         }
 
         let mut guid_name_map = HashMap::new();
-        if let Ok(mut dev) = Dir::open("/dev/", OFlag::O_DIRECTORY | OFlag::O_RDONLY, Mode::empty()) {
-            let iter = dev.iter();
-            let xda_regex = Regex::new(r"^(v|h|s)da$").unwrap();
-            let mmcblk_regex = Regex::new(r"^mmcblk\d$").unwrap();
-            let nvme_regex = Regex::new(r"^nvme\dn\d$").unwrap();
-
-            let is_disk = |input: &str| -> bool {
-                xda_regex.is_match(input) || mmcblk_regex.is_match(input) || nvme_regex.is_match(input)
-            };
-
-            for maybe_file in iter {
-                if let Ok(file) = maybe_file {
-                    if file.file_type().unwrap_or(Type::File) != Type::BlockDevice {
-                        continue;
-                    }
-
-                    if !is_disk(file.file_name().to_str().unwrap_or("")) {
-                        continue;
-                    }
-
-                    let disk: PathBuf = file.file_name().to_str().unwrap().into();
-                    let dev_disk = PathBuf::from("/dev/").join(&disk);
-                    let disk_string = disk.to_str().unwrap().to_string();
-
-                    let mut name = format!("{} {}", sys_block_data(&disk_string, "vendor"), sys_block_data(&disk_string, "model"));
-                    // if last character is a space, remove it
-                    if let Some(last) = name.chars().last() {
-                        if last == ' ' {
-                            name.pop();
-                        }
-                    }
-
-                    let gpt_cfg = GptConfig::new().writable(false);
-                    if let Ok(gpt_disk) = gpt_cfg.open(dev_disk) {
-                        for (_, part) in gpt_disk.partitions() {
-                            guid_name_map.insert(part.part_guid.as_u128(), name.clone());
+        for dev in SysfsClass::new("block").unwrap().enum_devices().unwrap() {
+            if let SysfsInnerDevice::Block(block) = dev.into_inner() {
+                if block.is_partition().unwrap_or(true) {
+                    continue;
+                }
+                if let Some(path) = block.dev_path() {
+                    if let Some(name) = block.fancy_name() {
+                        let gpt_cfg = GptConfig::new().writable(false);
+                        if let Ok(gpt_disk) = gpt_cfg.open(path) {
+                            for (_, part) in gpt_disk.partitions() {
+                                guid_name_map.insert(part.part_guid.as_u128(), name.clone());
+                            }
                         }
                     }
                 }
