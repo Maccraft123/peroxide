@@ -16,8 +16,8 @@ use nix::dir::Type;
 use nix::fcntl::readlink;
 use anyhow::Context;
 use gpt::GptConfig;
-use hwctl::{
-    SysfsClass, SysfsInnerDevice,
+use hwctl::sysfs::{
+    Block, SysfsDevice,
 };
 
 fn char16_to_string(buf: &[u8]) -> (String, usize) {
@@ -131,18 +131,16 @@ impl BootEntry for EfiEntry {
         }
 
         let mut guid_name_map = HashMap::new();
-        for dev in SysfsClass::new("block").unwrap().enum_devices().unwrap() {
-            if let SysfsInnerDevice::Block(block) = dev.into_inner() {
-                if block.is_partition().unwrap_or(true) {
-                    continue;
-                }
-                if let Some(path) = block.dev_path() {
-                    if let Some(name) = block.fancy_name() {
-                        let gpt_cfg = GptConfig::new().writable(false);
-                        if let Ok(gpt_disk) = gpt_cfg.open(path) {
-                            for (_, part) in gpt_disk.partitions() {
-                                guid_name_map.insert(part.part_guid.as_u128(), name.clone());
-                            }
+        for block in Block::enumerate_all().unwrap() {
+            if block.is_partition().unwrap_or(true) {
+                continue;
+            }
+            if let Some(path) = block.dev_path() {
+                if let Some(name) = block.fancy_name() {
+                    let gpt_cfg = GptConfig::new().writable(false);
+                    if let Ok(gpt_disk) = gpt_cfg.open(path) {
+                        for (_, part) in gpt_disk.partitions() {
+                            guid_name_map.insert(part.part_guid.as_u128(), name.clone());
                         }
                     }
                 }

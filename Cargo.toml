@@ -10,7 +10,7 @@ uefi = { version = "0.17.0", features = [ "exts" ] }
 uuid = "1.1.2"
 nix = { version = "0.25.0", features = [ "reboot", "fs" ] }
 aski = { git = "https://github.com/Maccraft123/aski.git", branch = "main" }
-#ozone = { git = "https://github.com/Maccraft123/ozone.git", branch = "main" }
+ozone = { git = "https://github.com/Maccraft123/ozone.git", branch = "main" }
 hwctl = { git = "https://github.com/Maccraft123/hwctl.git", branch = "main" }
 #ozone = { path = "/home/macc24/R/ozone" }
 #hwctl = { path = "/home/macc24/R/hwctl" }
