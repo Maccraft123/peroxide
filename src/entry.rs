@@ -10,13 +10,10 @@ pub fn enumerate_all() -> Vec<Box<dyn BootEntry + Sync + Send>> {
         ret.push(Box::new(entry));
     };
 
-    #[cfg(target_arch = "x86_64")]
-    {
-        let uefi_entries: Vec<EfiEntry> = EfiEntry::enumerate();
-        for entry in uefi_entries {
-            ret.push(Box::new(entry));
-        };
-    }
+    let uefi_entries: Vec<EfiEntry> = EfiEntry::enumerate();
+    for entry in uefi_entries {
+        ret.push(Box::new(entry));
+    };
 
     ret
 }
